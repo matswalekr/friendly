@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"backend/sqlite"
+	"sqlite"
 )
 
 // Globally scope constants
@@ -51,10 +51,21 @@ func main() {
 		fmt.Printf("User %s found\n", user.Username)
 	}
 
+	err = sqlite.CreateGroup(db, "test_group", "test_user")
+	if err != nil {
+		fmt.Println("Error when trying to create group")
+		fmt.Println(err)
+	}
+	fmt.Println("Group created")
+
 	// Clear the test_db
 	err = sqlite.ClearDb(db, "users")
 	if err == nil {
-		fmt.Printf("Db cleared successfully\n")
+		fmt.Printf("Users cleared successfully\n")
+	}
+	err = sqlite.ClearDb(db, "groups")
+	if err == nil {
+		fmt.Printf("groups cleared successfully\n")
 	}
 }
 

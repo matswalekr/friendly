@@ -1,21 +1,33 @@
 package errors
 
-import "fmt"
+import (
+	"fmt"
+)
 
-// Error if a user is not found
-type UserNotFoundError struct {
-	Username string
-}
-
-func (e *UserNotFoundError) Error() string {
-	return fmt.Sprintf("user with Name %s not found", e.Username)
-}
-
-// Error if the user already exists when trying to implement a new user
 type UserAlreadyExistsError struct {
 	Username string
 }
 
+// Implement the Error method for the custom error type
 func (e *UserAlreadyExistsError) Error() string {
-	return fmt.Sprintf("user with Name %s already exists", e.Username)
+	return fmt.Sprintf("User with username '%s' already exists", e.Username)
+}
+
+type UserNotFoundError struct {
+	Username string
+}
+
+// Implement the Error method for the custom error type
+func (e *UserNotFoundError) Error() string {
+	return fmt.Sprintf("User with username '%s' not found", e.Username)
+}
+
+// Define the custom error type
+type GroupAlreadyExistsError struct {
+	GroupName string
+}
+
+// Implement the Error method for the custom error type
+func (e *GroupAlreadyExistsError) Error() string {
+	return fmt.Sprintf("Group with name '%s' already exists", e.GroupName)
 }

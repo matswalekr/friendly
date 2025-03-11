@@ -2,11 +2,10 @@ package sqlite
 
 import (
 	"database/sql"
-	"fmt"
 	"net/mail"
 	"time"
 
-	"backend/sqlite/errors"
+	"sqlite/errors"
 
 	_ "github.com/mattn/go-sqlite3" // Import the SQLite driver
 )
@@ -46,23 +45,6 @@ func (u *User) InitializeUser(username string, email string, birthdate_string st
 	return u, nil
 }
 
-// Function to connect to a sqlite3 db. Returns a pointer to the db and an error.
-func ConnectDB(path_db string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", path_db)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	// Ping db to see if it returns a value
-	err = db.Ping()
-	if err != nil {
-		// Case when db does not connect
-		return nil, err
-	}
-
-	return db, err
-}
-
 // Function to check if a user exists in the db. Returns a user struct if the user exists, else nil.
 func UserExists(db *sql.DB, username string) (*User, error) {
 	var user User
@@ -94,10 +76,4 @@ func AddUser(db *sql.DB, user User, password string) error {
 	}
 
 	return nil
-}
-
-func ClearDb(db *sql.DB, tableName string) error {
-	query := fmt.Sprintf("DELETE FROM %s", tableName)
-	_, err := db.Exec(query)
-	return err
 }
