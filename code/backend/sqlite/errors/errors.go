@@ -31,3 +31,12 @@ type GroupAlreadyExistsError struct {
 func (e *GroupAlreadyExistsError) Error() string {
 	return fmt.Sprintf("Group with name '%s' already exists", e.GroupName)
 }
+
+type GroupDoesNotExist struct {
+	GroupName string
+}
+
+// Implement the Error method for GroupDoesNotExist
+func (e *GroupDoesNotExist) Error() string {
+	return fmt.Sprintf("Group with name '%s' does not exist", e.GroupName)
+}

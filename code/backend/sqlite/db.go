@@ -26,7 +26,17 @@ func ConnectDB(path_db string) (*sql.DB, error) {
 
 // Function to completely clear a table in a DB
 func ClearDb(db *sql.DB, tableName string) error {
+	// Construct the query string
 	query := fmt.Sprintf("DELETE FROM %s", tableName)
+
+	// Execute the query
 	_, err := db.Exec(query)
 	return err
+}
+
+func ClearTestDb(db *sql.DB) {
+	// Clear the entire test_db
+	_ = ClearDb(db, "users")
+	_ = ClearDb(db, "groups")
+	_ = ClearDb(db, "group_members")
 }

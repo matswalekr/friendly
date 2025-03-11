@@ -19,7 +19,7 @@ func main() {
 	}
 	defer db.Close()
 
-	fmt.Println("Connected to db")
+	sqlite.ClearTestDb(db)
 
 	var User_empty sqlite.User
 
@@ -38,7 +38,7 @@ func main() {
 	}
 
 	// Try to search for a user
-	user, err := sqlite.UserExists(db, "test_user")
+	user, err := sqlite.GetUser(db, "test_user")
 	if err != nil {
 		fmt.Println("Error when querrying for user")
 		fmt.Println(err)
@@ -51,22 +51,22 @@ func main() {
 		fmt.Printf("User %s found\n", user.Username)
 	}
 
-	err = sqlite.CreateGroup(db, "test_group", "test_user")
+	err = sqlite.AddGroup(db, "test_group", "test_user")
 	if err != nil {
 		fmt.Println("Error when trying to create group")
 		fmt.Println(err)
+		return
 	}
-	fmt.Println("Group created")
+	group, err := sqlite.GetGroup(db, "test_group")
+	if err != nil {
+		fmt.Println("Error when trying to get group")
+		fmt.Println(err)
+		return
+	}
+	group.PrintGroupMembers()
 
 	// Clear the test_db
-	err = sqlite.ClearDb(db, "users")
-	if err == nil {
-		fmt.Printf("Users cleared successfully\n")
-	}
-	err = sqlite.ClearDb(db, "groups")
-	if err == nil {
-		fmt.Printf("groups cleared successfully\n")
-	}
+	sqlite.ClearTestDb(db)
 }
 
 // To run go code: go run main.go

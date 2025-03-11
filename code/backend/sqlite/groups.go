@@ -3,6 +3,7 @@ package sqlite
 import (
 	"database/sql"
 	"sqlite/errors"
+	"time"
 )
 
 type Node_member struct {
@@ -50,26 +51,74 @@ func (list *Member_list) Remove(username string) {
 type Group struct {
 	Name    string
 	Owner   string
+	Id      int
 	Members *Member_list
 }
 
-func GroupExists(db *sql.DB, group_name string) (*Group, error) {
+func (g *Group) PrintGroupMembers() {
+	if g.Members.head == nil {
+		return
+	}
+	current := g.Members.head
+	for current != nil {
+		println(current.Username)
+		current = current.Next
+	}
+}
+
+func GetGroup(db *sql.DB, group_name string) (*Group, error) {
+	var err error
 	group := &Group{}
-	err := db.QueryRow("SELECT * FROM groups WHERE name = ?", group_name).Scan(&group.Name, &group.Owner)
+
+	err = db.QueryRow("SELECT name, group_id FROM groups WHERE name = ?", group_name).Scan(&group.Name, &group.Id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Case when no user is found (not an error)
+			// Case when no group is found (not an error)
 			return nil, nil
 		}
 		// Case when an error occurs
 		return nil, err
 	}
+
+	// Get the Owner
+	err = db.QueryRow("SELECT username FROM users WHERE user_id = (SELECT owner_id FROM groups WHERE name = ?)", group_name).Scan(&group.Owner)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the members of the group
+	rows, err := db.Query("SELECT username FROM users WHERE user_id = (SELECT user_id FROM group_members)")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var user_id int
+	var username string
+	for rows.Next() {
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		err = db.QueryRow("SELECT username FROM users WHERE user_id = ?", user_id).Scan(&username)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				// Case when no user is found
+				return nil, &errors.UserNotFoundError{Username: username}
+			}
+			// Case when another error occurs
+			return nil, err
+		}
+		// Add the user to the list of users
+		group.Members.Append(username)
+	}
+
+	// Return the group
 	return group, nil
 }
 
-func CreateGroup(db *sql.DB, group_name string, owner_name string) error {
+func AddGroup(db *sql.DB, group_name string, owner_name string) error {
 	// Make sure that the user exists
-	user, err := UserExists(db, owner_name)
+	user, err := GetUser(db, owner_name)
 	if err != nil {
 		return err
 	}
@@ -78,7 +127,7 @@ func CreateGroup(db *sql.DB, group_name string, owner_name string) error {
 	}
 
 	// Check if the group already exists
-	group, err := GroupExists(db, group_name)
+	group, err := GetGroup(db, group_name)
 	if err != nil {
 		return err
 	}
@@ -91,5 +140,44 @@ func CreateGroup(db *sql.DB, group_name string, owner_name string) error {
 	if err != nil {
 		return err
 	}
+
+	// Add the owner to the group_members
+	err = AddMember(db, group_name, owner_name)
+	if err != nil {
+		// If this did not work, delete the group
+		db.Exec("DELETE FROM groups WHERE name = ?", group_name)
+		return err
+	}
+
+	return nil
+}
+
+func AddMember(db *sql.DB, group_name string, member_name string) error {
+	// Make sure that the user exists
+	user, err := GetUser(db, member_name)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return &errors.UserNotFoundError{Username: member_name}
+	}
+
+	// Check if the group already exists
+	group, err := GetGroup(db, group_name)
+	if err != nil {
+		return err
+	}
+	if group == nil {
+		return &errors.GroupDoesNotExist{GroupName: group_name}
+	}
+
+	// Get todays date
+	today := time.Now().Format("2006-01-02")
+
+	_, err = db.Exec("INSERT INTO group_members (group_id, member, date_joined) VALUES ((SELECT group_id FROM groups WHERE name = ?), (SELECT user_id FROM users WHERE username = ?), ?)", group_name, member_name, today)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

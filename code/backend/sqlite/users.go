@@ -46,7 +46,7 @@ func (u *User) InitializeUser(username string, email string, birthdate_string st
 }
 
 // Function to check if a user exists in the db. Returns a user struct if the user exists, else nil.
-func UserExists(db *sql.DB, username string) (*User, error) {
+func GetUser(db *sql.DB, username string) (*User, error) {
 	var user User
 
 	query := "SELECT username, birthdate, date_joined, email  FROM users WHERE username = ?"
