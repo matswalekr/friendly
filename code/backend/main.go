@@ -2,71 +2,77 @@ package main
 
 import (
 	"fmt"
-
+	"net/http"
 	"sqlite"
+
+	"github.com/gin-gonic/gin"
 )
 
-// Globally scope constants
-const test_db_path string = "../database/test_db.db"
-const main_db_path string = "../database/database.db"
-
 func main() {
-	db, err := sqlite.ConnectDB(test_db_path)
 
+	/****************
+	* Connect to DB *
+	*****************/
+
+	db, err := sqlite.ConnectDB(sqlite.Test_db_path)
 	if err != nil {
 		fmt.Println("Error when trying to connect to db")
 		return
 	}
 	defer db.Close()
 
-	sqlite.ClearTestDb(db)
+	/****************
+	* Setup Gin API *
+	*****************/
 
-	var User_empty sqlite.User
+	r := gin.Default()
 
-	new_user, err := User_empty.InitializeUser("test_user", "walma697@gmail.com", "1997-06-07")
-	if err != nil {
-		fmt.Println("Error when trying to initialize user")
-		fmt.Println(err)
-		return
-	}
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+		c.Next()
+	})
 
-	err = sqlite.AddUser(db, *new_user, "password")
-	if err != nil {
-		fmt.Println("Error when trying to add user")
-		fmt.Println(err)
-		return
-	}
+	/********************
+	* Authenticate User *
+	*********************/
 
-	// Try to search for a user
-	user, err := sqlite.GetUser(db, "test_user")
-	if err != nil {
-		fmt.Println("Error when querrying for user")
-		fmt.Println(err)
-		return
-	}
+	// POST logic for login
+	r.POST("/login", func(c *gin.Context) {
+		// Struct for user data, includes username and password
+		var loginData struct {
+			Username string `json:"Username"`
+			Password string `json:"Password"`
+		}
 
-	if user == nil {
-		fmt.Println("No user found")
-	} else {
-		fmt.Printf("User %s found\n", user.Username)
-	}
+		if err := c.ShouldBindJSON(&loginData); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request"})
+			return
+		}
 
-	err = sqlite.AddGroup(db, "test_group", "test_user")
-	if err != nil {
-		fmt.Println("Error when trying to create group")
-		fmt.Println(err)
-		return
-	}
-	group, err := sqlite.GetGroup(db, "test_group")
-	if err != nil {
-		fmt.Println("Error when trying to get group")
-		fmt.Println(err)
-		return
-	}
-	group.PrintGroupMembers()
+		// Authentification logic for user
+		// 1. Check if user exists in the db
+		user, err := sqlite.GetUser(db, loginData.Username)
+		if err != nil || user == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "User not found"})
+		} else {
+			// 2. Check if the password is correct
+			if sqlite.VerifyUser(db, loginData.Username, loginData.Password) {
+				c.JSON(http.StatusOK, gin.H{"message": "Login successful!"})
+			} else {
+				c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid credentials"})
+			}
+		}
 
-	// Clear the test_db
-	sqlite.ClearTestDb(db)
+	})
+
+	// ✅ Start server on port 8080
+	r.Run(":8080")
 }
 
 // To run go code: go run main.go

@@ -7,6 +7,10 @@ import (
 	_ "github.com/mattn/go-sqlite3" // Import the SQLite driver
 )
 
+// Globally scope constants
+const Test_db_path string = "../database/test_db.db"
+const Main_db_path string = "../database/database.db"
+
 // Function to connect to a sqlite3 db. Returns a pointer to the db and an error.
 func ConnectDB(path_db string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", path_db)

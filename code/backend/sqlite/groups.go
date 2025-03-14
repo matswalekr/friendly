@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"fmt"
 	"sqlite/errors"
 	"time"
 )
@@ -52,10 +53,11 @@ type Group struct {
 	Name    string
 	Owner   string
 	Id      int
-	Members *Member_list
+	Members Member_list
 }
 
 func (g *Group) PrintGroupMembers() {
+	fmt.Println("Group members:")
 	if g.Members.head == nil {
 		return
 	}
@@ -87,29 +89,26 @@ func GetGroup(db *sql.DB, group_name string) (*Group, error) {
 	}
 
 	// Get the members of the group
-	rows, err := db.Query("SELECT username FROM users WHERE user_id = (SELECT user_id FROM group_members)")
+	rows, err := db.Query("SELECT username FROM users WHERE user_id = (SELECT user_id FROM group_members WHERE group_id = ?)", group.Id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var user_id int
+	group.Members = Member_list{}
+
 	var username string
 	for rows.Next() {
-		if err := rows.Scan(&user_id); err != nil {
-			return nil, err
-		}
-		err = db.QueryRow("SELECT username FROM users WHERE user_id = ?", user_id).Scan(&username)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				// Case when no user is found
-				return nil, &errors.UserNotFoundError{Username: username}
-			}
-			// Case when another error occurs
+		if err := rows.Scan(&username); err != nil {
 			return nil, err
 		}
 		// Add the user to the list of users
 		group.Members.Append(username)
+	}
+
+	// Check if there were any errors during iteration
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	// Return the group

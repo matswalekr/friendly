@@ -45,6 +45,15 @@ func (u *User) InitializeUser(username string, email string, birthdate_string st
 	return u, nil
 }
 
+/*
+	Function to verify if the login credentials are correct
+
+Returns true if the password and username are found in the db
+*/
+func VerifyUser(db *sql.DB, username string, password string) bool {
+	return false
+}
+
 // Function to check if a user exists in the db. Returns a user struct if the user exists, else nil.
 func GetUser(db *sql.DB, username string) (*User, error) {
 	var user User
